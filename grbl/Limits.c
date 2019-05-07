@@ -232,7 +232,7 @@ void Limits_GoHome(uint8_t cycle_mask)
 					if(axislock & step_pin[idx]) {
 						if(limit_state & (1 << idx)) {
 #ifdef COREXY
-							if(idx==Z_AXIS) {
+							if(idx == Z_AXIS) {
 								axislock &= ~(step_pin[Z_AXIS]);
 							}
 							else {
@@ -252,7 +252,7 @@ void Limits_GoHome(uint8_t cycle_mask)
 
 			// Exit routines: No time to run protocol_execute_realtime() in this loop.
 			if(sys_rt_exec_state & (EXEC_SAFETY_DOOR | EXEC_RESET | EXEC_CYCLE_STOP)) {
-				uint8_t rt_exec = sys_rt_exec_state;
+				uint16_t rt_exec = sys_rt_exec_state;
 
 				// Homing failure condition: Reset issued during cycle.
 				if(rt_exec & EXEC_RESET) {
@@ -345,7 +345,12 @@ void Limits_GoHome(uint8_t cycle_mask)
 
 		}
 	}
+
+    // Necessary for backlash compensation
+	MC_Init();
+
 	sys.step_control = STEP_CONTROL_NORMAL_OP; // Return step control to normal operation.
+	sys.is_homed = 1;   // Machine is homed and knows its position
 }
 
 

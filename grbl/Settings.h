@@ -28,7 +28,7 @@
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom
-#define SETTINGS_VERSION 					2  // NOTE: Check settings_reset() when moving to next version.
+#define SETTINGS_VERSION 					4  // NOTE: Check settings_reset() when moving to next version.
 
 
 // Define bit flag masks for the boolean settings in settings.system_flags
@@ -78,7 +78,7 @@
 // #define SETTING_INDEX_G92    N_COORDINATE_SYSTEM+2  // Coordinate offset (G92.2,G92.3 not supported)
 
 // Define Grbl axis settings numbering scheme. Starts at START_VAL, every INCREMENT, over N_SETTINGS.
-#define AXIS_N_SETTINGS          			4
+#define AXIS_N_SETTINGS          			5
 #define AXIS_SETTINGS_START_VAL  			100 // NOTE: Reserving settings values >= 100 for axis settings. Up to 255.
 #define AXIS_SETTINGS_INCREMENT  			10  // Must be greater than the number of axis settings
 
@@ -87,13 +87,23 @@
 #endif
 
 
-// Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
+#pragma pack(push, 1) // exact fit - no padding
+// Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards); 111 Bytes
 typedef struct {
 	// Axis settings
 	float steps_per_mm[N_AXIS];
 	float max_rate[N_AXIS];
 	float acceleration[N_AXIS];
 	float max_travel[N_AXIS];
+
+	float backlash[N_AXIS];
+
+    // Tool change mode
+    uint8_t tool_change;
+
+	// Position of tool length sensor (only XYZ axis)
+	int32_t tls_position[N_AXIS];
+	uint8_t tls_valid;
 
 	// Remaining Grbl settings
 	// TODO: document system_flags
@@ -116,6 +126,7 @@ typedef struct {
 	uint16_t homing_debounce_delay;
 	float homing_pulloff;
 } Settings_t;
+#pragma pack(pop)
 
 
 extern Settings_t settings;
@@ -129,6 +140,9 @@ void Settings_Restore(uint8_t restore_flag);
 
 // A helper method to set new settings from command line
 uint8_t Settings_StoreGlobalSetting(uint8_t parameter, float value);
+
+// Save current position to tls position
+void Settings_StoreTlsPosition(void);
 
 // Stores the protocol line variable as a startup line in EEPROM
 void Settings_StoreStartupLine(uint8_t n, char *line);

@@ -28,6 +28,7 @@
 #include "Settings.h"
 #include "Stepper.h"
 #include "System.h"
+#include "ToolChange.h"
 #include "System32.h"
 
 
@@ -79,9 +80,9 @@ uint8_t System_GetControlState(void)
 		if(BIT_IS_FALSE(pin, (1<<CONTROL_CYCLE_START_BIT))) {
 			control_state |= CONTROL_PIN_INDEX_CYCLE_START;
 		}
-		if(BIT_IS_FALSE(pin, (1<<CONTROL_SAFETY_DOOR_BIT))) {
+		/*if(BIT_IS_FALSE(pin, (1<<CONTROL_SAFETY_DOOR_BIT))) {
 			control_state |= CONTROL_PIN_INDEX_SAFETY_DOOR;
-		}
+		}*/
 	}
 
 	return control_state;
@@ -103,10 +104,10 @@ void System_PinChangeISR(void)
 		else if(BIT_IS_TRUE(pin, CONTROL_PIN_INDEX_CYCLE_START)) {
 			BIT_TRUE(sys_rt_exec_state, EXEC_CYCLE_START);
 		}
-		else if(BIT_IS_TRUE(pin, CONTROL_PIN_INDEX_FEED_HOLD)) {
+		if(BIT_IS_TRUE(pin, CONTROL_PIN_INDEX_FEED_HOLD)) {
 			BIT_TRUE(sys_rt_exec_state, EXEC_FEED_HOLD);
 		}
-		else if(BIT_IS_TRUE(pin, CONTROL_PIN_INDEX_SAFETY_DOOR)) {
+		if(BIT_IS_TRUE(pin, CONTROL_PIN_INDEX_SAFETY_DOOR)) {
 			BIT_TRUE(sys_rt_exec_state, EXEC_SAFETY_DOOR);
 		}
 	}
@@ -234,6 +235,48 @@ uint8_t System_ExecuteLine(char *line)
 		}
 		break;
 
+    case 'T':
+        // Tool change finished. Continue execution
+        System_ClearExecStateFlag(EXEC_TOOL_CHANGE);
+        sys.state = STATE_IDLE;
+
+		// Check if machine is homed and tls enabled
+		if(settings.tool_change == 2)
+        {
+            if(sys.is_homed)
+            {
+                if(settings.tls_valid)
+                {
+                    TC_ProbeTLS();
+                }
+                else
+                {
+                    return STATUS_TLS_NOT_SET;
+                }
+            }
+            else
+            {
+                return STATUS_MACHINE_NOT_HOMED;
+            }
+        }
+        else
+        {
+            return STATUS_SETTING_DISABLED;
+        }
+        break;
+
+    case 'P':
+        if(sys.is_homed)
+        {
+            Settings_StoreTlsPosition();
+        }
+        else
+        {
+            return STATUS_MACHINE_NOT_HOMED;
+        }
+
+        break;
+
 	default:
 		// Block any system command that requires the state as IDLE/ALARM. (i.e. EEPROM, homing)
 		if(!(sys.state == STATE_IDLE || sys.state == STATE_ALARM) ) {
@@ -292,7 +335,7 @@ uint8_t System_ExecuteLine(char *line)
 
 			if(!sys.abort) {  // Execute startup scripts after successful homing.
 				sys.state = STATE_IDLE; // Set to IDLE when complete.
-				Stepper_Disable(); // Set steppers to the settings idle state before returning.
+				Stepper_Disable(0); // Set steppers to the settings idle state before returning.
 
 				if(line[2] == 0) {
 					System_ExecuteStartup(line);
@@ -437,7 +480,7 @@ void System_FlagWcoChange(void)
 // Returns machine position of axis 'idx'. Must be sent a 'step' array.
 // NOTE: If motor steps and machine position are not in the same coordinate frame, this function
 //   serves as a central place to compute the transformation.
-float System_ConvertAxisSteps2Mpos(int32_t *steps, uint8_t idx)
+float System_ConvertAxisSteps2Mpos(const int32_t *steps, const uint8_t idx)
 {
 	float pos;
 
@@ -459,7 +502,7 @@ float System_ConvertAxisSteps2Mpos(int32_t *steps, uint8_t idx)
 }
 
 
-void System_ConvertArraySteps2Mpos(float *position, int32_t *steps)
+void System_ConvertArraySteps2Mpos(float *position, const int32_t *steps)
 {
 	uint8_t idx;
 
@@ -517,7 +560,7 @@ uint8_t System_CheckTravelLimits(float *target)
 
 
 // Special handlers for setting and clearing Grbl's real-time execution flags.
-void System_SetExecStateFlag(uint8_t mask)
+void System_SetExecStateFlag(uint16_t mask)
 {
 	uint32_t primask = __get_PRIMASK();
 	__disable_irq();
@@ -528,7 +571,7 @@ void System_SetExecStateFlag(uint8_t mask)
 }
 
 
-void System_ClearExecStateFlag(uint8_t mask)
+void System_ClearExecStateFlag(uint16_t mask)
 {
 	uint32_t primask = __get_PRIMASK();
 	__disable_irq();

@@ -3,7 +3,7 @@
   Part of Grbl-Advanced
 
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
-  Copyright (c)	2017 Patrick F.
+  Copyright (c)	2017-2019 Patrick F.
 
   Grbl-Advanced is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -57,6 +57,7 @@ static void Report_LineFeed(void)
 {
 	Putc('\r');
 	Putc('\n');
+	Print_Flush();
 }
 
 
@@ -121,12 +122,14 @@ void Report_StatusMessage(uint8_t status_code)
 	{
 	case STATUS_OK: // STATUS_OK
 		Printf("ok\r\n");
+		Print_Flush();
 		break;
 
 	default:
 		Printf("error:");
-		Printf("%d", status_code);
-		Report_LineFeed();
+		Printf("%d\r\n", status_code);
+		//Report_LineFeed();
+		Print_Flush();
 	}
 }
 
@@ -138,7 +141,7 @@ void Report_AlarmMessage(uint8_t alarm_code)
 	Printf("%d", alarm_code);
 	Report_LineFeed();
 
-	Delay_ms(300); // Force delay to ensure message clears serial write buffer.
+	Delay_ms(200); // Force delay to ensure message clears serial write buffer.
 }
 
 
@@ -207,12 +210,14 @@ void Report_InitMessage(void)
 {
 	//Printf("\r\nGRBL-Advanced %s ['$' for help]\r\n", GRBL_VERSION);
 	Printf("\r\nGrbl 1.1f ['$' for help]\r\n");
+	Print_Flush();
 }
 
 
 // Grbl help message
 void Report_GrblHelp(void) {
 	Printf("[HLP:$$ $# $G $I $N $x=val $Nx=line $J=line $SLP $C $X $H ~ ! ? ctrl-x]\r\n");
+	Print_Flush();
 }
 
 
@@ -231,6 +236,7 @@ void Report_GrblSettings(void) {
 	report_util_float_setting(11, settings.junction_deviation, N_DECIMAL_SETTINGVALUE);
 	report_util_float_setting(12, settings.arc_tolerance, N_DECIMAL_SETTINGVALUE);
 	report_util_uint8_setting(13, BIT_IS_TRUE(settings.flags, BITFLAG_REPORT_INCHES));
+	report_util_uint8_setting(14, settings.tool_change);
 	report_util_uint8_setting(20, BIT_IS_TRUE(settings.flags, BITFLAG_SOFT_LIMIT_ENABLE));
 	report_util_uint8_setting(21, BIT_IS_TRUE(settings.flags, BITFLAG_HARD_LIMIT_ENABLE));
 	report_util_uint8_setting(22, BIT_IS_TRUE(settings.flags, BITFLAG_HOMING_ENABLE));
@@ -250,9 +256,12 @@ void Report_GrblSettings(void) {
 	uint8_t idx, set_idx;
 	uint8_t val = AXIS_SETTINGS_START_VAL;
 
-	for(set_idx = 0; set_idx < AXIS_N_SETTINGS; set_idx++) {
-		for(idx = 0; idx < N_AXIS; idx++) {
-			switch(set_idx) {
+	for(set_idx = 0; set_idx < AXIS_N_SETTINGS; set_idx++)
+    {
+		for(idx = 0; idx < N_AXIS; idx++)
+        {
+			switch(set_idx)
+            {
 			case 0:
 				report_util_float_setting(val+idx,settings.steps_per_mm[idx],N_DECIMAL_SETTINGVALUE);
 				break;
@@ -269,6 +278,10 @@ void Report_GrblSettings(void) {
 				report_util_float_setting(val+idx,-settings.max_travel[idx],N_DECIMAL_SETTINGVALUE);
 				break;
 
+            case 4:
+                report_util_float_setting(val+idx,settings.backlash[idx],N_DECIMAL_SETTINGVALUE);
+                break;
+
 			default:
 				break;
 			}
@@ -276,6 +289,7 @@ void Report_GrblSettings(void) {
 
 		val += AXIS_SETTINGS_INCREMENT;
 	}
+	Print_Flush();
 }
 
 
@@ -292,6 +306,29 @@ void Report_ProbeParams(void)
 	Report_AxisValue(print_position);
 	Putc(':');
 	Printf("%d", sys.probe_succeeded);
+	report_util_feedback_line_feed();
+}
+
+
+void Report_TLSParams(void)
+{
+    float print_position[N_AXIS];
+    uint8_t idx = 0;
+
+    // Report in terms of machine position.
+	Printf("[TLS:");
+	System_ConvertArraySteps2Mpos(print_position, settings.tls_position);
+
+	for(idx = 0; idx < 3; idx++) {
+		PrintFloat_CoordValue(print_position[idx]);
+
+		if(idx < (3-1)) {
+			Putc(',');
+		}
+	}
+
+	Putc(':');
+	Printf("%d", settings.tls_valid);
 	report_util_feedback_line_feed();
 }
 
@@ -331,13 +368,16 @@ void Report_NgcParams(void)
 		report_util_feedback_line_feed();
 	}
 
-	Printf("[G92:"); // Print G92,G92.1 which are not persistent in memory
+	Printf("[G92:");        // Print G92,G92.1 which are not persistent in memory
 	Report_AxisValue(gc_state.coord_offset);
 	report_util_feedback_line_feed();
-	Printf("[TLO:"); // Print tool length offset value
+	Printf("[TLO:");        // Print tool length offset value
 	PrintFloat_CoordValue(gc_state.tool_length_offset);
 	report_util_feedback_line_feed();
-	Report_ProbeParams(); // Print probe parameters. Not persistent in memory.
+	Report_ProbeParams();   // Print probe parameters. Not persistent in memory.
+	Report_TLSParams();     // Print tls position. Persistent in memory.
+
+	Print_Flush();
 }
 
 
@@ -474,9 +514,9 @@ void Report_BuildInfo(char *line)
 	Printf("[OPT:"); // Generate compile-time build option list
     Putc('V');
 
-#ifdef USE_LINE_NUMBERS
+//#ifdef USE_LINE_NUMBERS
 	Putc('N');
-#endif
+//#endif
 #ifdef ENABLE_M7
 	Putc('M');
 #endif
@@ -620,6 +660,14 @@ void Report_RealtimeStatus(void)
 	case STATE_SLEEP:
 		Printf("Sleep");
 		break;
+
+    case STATE_FEED_DWELL:
+        Printf("Dwell");
+        break;
+
+    case STATE_TOOL_CHANGE:
+        Printf("Tool");
+        break;
 
 	default:
 		break;

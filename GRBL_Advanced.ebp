@@ -59,6 +59,7 @@
 				</Assembler>
 				<Linker>
 					<Add option="-Wl,--gc-sections" />
+					<Add option="-flto" />
 				</Linker>
 			</Target>
 		</Build>
@@ -66,16 +67,16 @@
 			<Add option="$device=cortex-m4" />
 			<Add option="$fpu=fpv4-sp-d16" />
 			<Add option="$lscript=./stm32f411re_flash.ld" />
-			<Add option="$stack=0x0200" />
+			<Add option="$stack=0x0300" />
 			<Add option="$heap=0x0000" />
 		</Device>
 		<Compiler>
 			<Add option="-mfloat-abi=hard" />
-			<Add option="-std=c99" />
+			<Add option="-std=c11" />
 			<Add option="-Wextra" />
 			<Add option="-Wall" />
-			<Add option="-fno-strict-aliasing" />
 			<Add option="-fsingle-precision-constant" />
+			<Add option="-fno-strict-aliasing" />
 			<Add symbol="ARM_MATH_CM4" />
 			<Add symbol="__FPU_USED" />
 			<Add symbol="STM32F411RE" />
@@ -93,6 +94,11 @@
 			<Add option="-flto" />
 			<Add option="-lm" />
 		</Linker>
+		<ExtraCommands>
+			<Add after="arm-none-eabi-objcopy -O binary ${PROJECT_DIR}${TARGET_OUTPUT_DIR}${TARGET_OUTPUT_BASENAME}.elf ${PROJECT_DIR}${TARGET_OUTPUT_DIR}${TARGET_OUTPUT_BASENAME}.bin" />
+			<Mode before="0" />
+			<Mode after="1" />
+		</ExtraCommands>
 		<Unit filename="cmsis\arm_common_tables.h" />
 		<Unit filename="cmsis\arm_math.h" />
 		<Unit filename="cmsis\core_cm4.h" />
@@ -122,6 +128,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="grbl\MotionControl.h" />
+		<Unit filename="grbl\Nvm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="grbl\Nvm.h" />
 		<Unit filename="grbl\Planner.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -154,6 +164,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="grbl\System.h" />
+		<Unit filename="grbl\ToolChange.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="grbl\ToolChange.h" />
 		<Unit filename="grbl\util.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -170,6 +184,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="HAL\GPIO\GPIO.h" />
+		<Unit filename="HAL\I2C\I2C.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="HAL\I2C\I2C.h" />
 		<Unit filename="HAL\SPI\SPI.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -206,6 +224,7 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="README.md" />
 		<Unit filename="SPL\inc\misc.h" />
 		<Unit filename="SPL\inc\stm32f4xx_adc.h" />
 		<Unit filename="SPL\inc\stm32f4xx_can.h" />
@@ -322,6 +341,11 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="Src\debug.h" />
+		<Unit filename="Src\M24C0X.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Src\M24C0X.h" />
+		<Unit filename="Src\Platform.h" />
 		<Unit filename="Src\Print.c">
 			<Option compilerVar="CC" />
 		</Unit>

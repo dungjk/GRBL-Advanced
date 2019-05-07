@@ -69,7 +69,7 @@
 #ifdef MAX_STEP_RATE_HZ
     #define STEP_TIMER_MIN          (uint16_t)(F_TIMER_STEPPER / MAX_STEP_RATE_HZ)
 #else
-    #define STEP_TIMER_MIN          (uint16_t)(50000)
+    #define STEP_TIMER_MIN          (uint16_t)((F_TIMER_STEPPER / 60000))
 #endif
 
 
@@ -97,6 +97,8 @@ typedef struct {
 	uint8_t  st_block_index;   // Stepper block data index. Uses this information to execute this segment.
 	uint8_t amass_level;    // Indicates AMASS level for the ISR to execute this segment
 	uint8_t spindle_pwm;
+
+	uint8_t backlash_motion;
 } Stepper_Segment_t;
 
 
@@ -222,6 +224,7 @@ void Stepper_Init(void)
 	TIM9_Init();
 }
 
+
 // Stepper state initialization. Cycle should only start if the st.cycle_start flag is
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
 void Stepper_WakeUp(void)
@@ -234,6 +237,9 @@ void Stepper_WakeUp(void)
 		GPIO_ResetBits(GPIO_ENABLE_PORT, GPIO_ENABLE_PIN);
 	}
 
+    // Give steppers some time to wake up
+	Delay_ms(10);
+
 	// Initialize stepper output bits to ensure first ISR call does not step.
 	//st.step_outbits = step_port_invert_mask;
 	st.step_outbits = 0;
@@ -244,7 +250,7 @@ void Stepper_WakeUp(void)
 
 
 // Stepper shutdown
-void Stepper_Disable(void)
+void Stepper_Disable(uint8_t ovr_disable)
 {
 	// Disable Stepper Driver Interrupt.
 	TIM_Cmd(TIM9, DISABLE);
@@ -262,6 +268,12 @@ void Stepper_Disable(void)
 		Delay_ms(settings.stepper_idle_lock_time);
 		pin_state = true; // Override. Disable steppers.
 	}
+
+	if(ovr_disable)
+    {
+        // Disable
+        pin_state = true;
+    }
 
 	if(BIT_IS_TRUE(settings.flags, BITFLAG_INVERT_ST_ENABLE)) {
 		pin_state = !pin_state;
@@ -416,7 +428,7 @@ void Stepper_MainISR(void)
 		}
 		else {
 			// Segment buffer empty. Shutdown.
-			Stepper_Disable();
+			Stepper_Disable(0);
 
 			// Ensure pwm is set properly upon completion of rate-controlled motion.
 			if(st.exec_block->is_pwm_rate_adjusted) {
@@ -444,12 +456,15 @@ void Stepper_MainISR(void)
 		st.step_outbits |= (1<<X_STEP_BIT);
 		st.counter_x -= st.exec_block->step_event_count;
 
-		if(st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) {
-			sys_position[X_AXIS]--;
-		}
-		else {
-			sys_position[X_AXIS]++;
-		}
+        if(st.exec_segment->backlash_motion == 0)
+        {
+            if(st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) {
+                sys_position[X_AXIS]--;
+            }
+            else {
+                sys_position[X_AXIS]++;
+            }
+        }
 	}
 
 	st.counter_y += st.steps[Y_AXIS];
@@ -458,12 +473,15 @@ void Stepper_MainISR(void)
 		st.step_outbits |= (1<<Y_STEP_BIT);
 		st.counter_y -= st.exec_block->step_event_count;
 
-		if(st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) {
-			sys_position[Y_AXIS]--;
-		}
-		else {
-			sys_position[Y_AXIS]++;
-		}
+        if(st.exec_segment->backlash_motion == 0)
+        {
+            if(st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) {
+                sys_position[Y_AXIS]--;
+            }
+            else {
+                sys_position[Y_AXIS]++;
+            }
+        }
 	}
 
 	st.counter_z += st.steps[Z_AXIS];
@@ -472,12 +490,15 @@ void Stepper_MainISR(void)
 		st.step_outbits |= (1<<Z_STEP_BIT);
 		st.counter_z -= st.exec_block->step_event_count;
 
-		if(st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) {
-			sys_position[Z_AXIS]--;
-		}
-		else {
-			sys_position[Z_AXIS]++;
-		}
+        if(st.exec_segment->backlash_motion == 0)
+        {
+            if(st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) {
+                sys_position[Z_AXIS]--;
+            }
+            else {
+                sys_position[Z_AXIS]++;
+            }
+        }
 	}
 
 	// During a homing cycle, lock out and prevent desired axes from moving.
@@ -558,7 +579,7 @@ void Stepper_GenerateStepDirInvertMasks(void)
 void Stepper_Reset(void)
 {
 	// Initialize stepper driver idle state.
-	Stepper_Disable();
+	Stepper_Disable(0);
 
 	// Initialize stepper algorithm variables.
 	memset(&prep, 0, sizeof(Stepper_PrepData_t));
@@ -858,6 +879,8 @@ void Stepper_PrepareBuffer(void)
 
 		// Set new segment to point to the current segment data block.
 		prep_segment->st_block_index = prep.st_block_index;
+
+		prep_segment->backlash_motion = pl_block->backlash_motion;
 
 		/*------------------------------------------------------------------------------------
 		Compute the average velocity of this new segment by determining the total distance

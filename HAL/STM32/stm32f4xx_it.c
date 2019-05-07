@@ -54,10 +54,19 @@ extern void Limit_PinChangeISR(void);
 extern void System_PinChangeISR(void);
 
 
+// Counter for milliseconds
+static volatile uint32_t gMillis = 0;
+
 
 /******************************************************************************/
 /*            Cortex-M4 Processor Exceptions Handlers                         */
 /******************************************************************************/
+
+uint32_t millis(void)
+{
+	return gMillis;
+}
+
 
 /**
   * @brief  This function handles NMI exception.
@@ -191,6 +200,8 @@ void SysTick_Handler(void)
 	if(DebounceCounterControl && !controls) {
 		DebounceCounterControl--;
 	}
+
+	gMillis++;
 }
 
 
@@ -286,6 +297,7 @@ void USART2_IRQHandler(void)
 		switch(c)
 		{
 		case CMD_RESET:         MC_Reset(); break; // Call motion control reset routine.
+		case CMD_RESET_HARD:    NVIC_SystemReset();     // Perform hard reset
 		case CMD_STATUS_REPORT: System_SetExecStateFlag(EXEC_STATUS_REPORT);break;
 		case CMD_CYCLE_START:   System_SetExecStateFlag(EXEC_CYCLE_START); break; // Set as true
 		case CMD_FEED_HOLD:     System_SetExecStateFlag(EXEC_FEED_HOLD); break; // Set as true

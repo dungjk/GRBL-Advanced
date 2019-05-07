@@ -29,6 +29,7 @@
 #include "SpindleControl.h"
 #include "CoolantControl.h"
 #include "Protocol.h"
+#include "MotionControl.h"
 
 #include "Print.h"
 
@@ -39,9 +40,9 @@
 // characters. In future versions, this will be increased, when we know how much extra
 // memory space we can invest into here or we re-write the g-code parser not to have this
 // buffer.
-/*#ifndef LINE_BUFFER_SIZE
+#ifndef LINE_BUFFER_SIZE
   #define LINE_BUFFER_SIZE		256
-#endif*/
+#endif
 
 
 // Define line flags. Includes comment type tracking and line overflow detection.
@@ -96,6 +97,7 @@ void Protocol_MainLoop(void)
 	uint8_t char_counter = 0;
 	char c;
 
+
 	for(;;) {
 		// Process one line of incoming serial data, as the data becomes available. Performs an
 		// initial filtering by removing spaces and comments and capitalizing all letters.
@@ -127,7 +129,7 @@ void Protocol_MainLoop(void)
 					// Grbl '$' system command
 					Report_StatusMessage(System_ExecuteLine(line));
 				}
-				else if(sys.state & (STATE_ALARM | STATE_JOG)) {
+				else if(sys.state & (STATE_ALARM | STATE_JOG | STATE_TOOL_CHANGE)) {
 					// Everything else is gcode. Block if in alarm or jog mode.
 					Report_StatusMessage(STATUS_SYSTEM_GC_LOCK);
 				}
@@ -465,6 +467,7 @@ void Protocol_ExecRtSystem(void)
 					Stepper_Reset();
 					GC_SyncPosition();
 					Planner_SyncPosition();
+					MC_SyncBacklashPosition();
 				}
 
 				if(sys.suspend & SUSPEND_SAFETY_DOOR_AJAR) { // Only occurs when safety door opens during jog.
@@ -755,7 +758,7 @@ static void Protocol_ExecRtSuspend(void)
 						// Spindle and coolant should already be stopped, but do it again just to be sure.
 						Spindle_SetState(SPINDLE_DISABLE, 0.0); // De-energize
 						Coolant_SetState(COOLANT_DISABLE); // De-energize
-						Stepper_Disable(); // Disable steppers
+						Stepper_Disable(0); // Disable steppers
 
 						while(!(sys.abort)) {
 							Protocol_ExecRtSystem();

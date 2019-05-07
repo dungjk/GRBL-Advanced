@@ -30,7 +30,7 @@
 #include "System.h"
 #include "Stepper.h"
 #include "defaults.h"
-#include "eeprom.h"
+#include "Nvm.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -45,9 +45,9 @@ void Settings_StoreStartupLine(uint8_t n, char *line)
 	Protocol_BufferSynchronize(); // A startup line may contain a motion and be executing.
 #endif
 
-	uint32_t addr = n*(LINE_BUFFER_SIZE+1)+EEPROM_ADDR_STARTUP_BLOCK;
-	EE_WriteByteArray(addr, (uint8_t*)line, LINE_BUFFER_SIZE);
-	EE_Program();
+	uint32_t addr = n*(STARTUP_LINE_LEN+1)+EEPROM_ADDR_STARTUP_BLOCK;
+	Nvm_Write(addr, (uint8_t*)line, STARTUP_LINE_LEN);
+	Nvm_Update();
 }
 
 
@@ -56,8 +56,8 @@ void Settings_StoreStartupLine(uint8_t n, char *line)
 void Settings_StoreBuildInfo(char *line)
 {
 	// Build info can only be stored when state is IDLE.
-	EE_WriteByteArray(EEPROM_ADDR_BUILD_INFO, (uint8_t*)line, LINE_BUFFER_SIZE);
-	EE_Program();
+	Nvm_Write(EEPROM_ADDR_BUILD_INFO, (uint8_t*)line, STARTUP_LINE_LEN);
+	Nvm_Update();
 }
 
 
@@ -69,9 +69,9 @@ void Settings_WriteCoordData(uint8_t coord_select, float *coord_data)
 #endif
 
 	uint32_t addr = coord_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_PARAMETERS;
-	EE_WriteByteArray(addr, (uint8_t*)coord_data, sizeof(float)*N_AXIS);
+	Nvm_Write(addr, (uint8_t*)coord_data, sizeof(float)*N_AXIS);
 
-	EE_Program();
+	Nvm_Update();
 }
 
 
@@ -79,10 +79,10 @@ void Settings_WriteCoordData(uint8_t coord_select, float *coord_data)
 // NOTE: This function can only be called in IDLE state.
 void WriteGlobalSettings(void)
 {
-	EE_WriteByte(0, SETTINGS_VERSION);
-	EE_WriteByteArray(EEPROM_ADDR_GLOBAL, (uint8_t*)&settings, sizeof(Settings_t));
+	Nvm_WriteByte(0, SETTINGS_VERSION);
+	Nvm_Write(EEPROM_ADDR_GLOBAL, (uint8_t*)&settings, sizeof(Settings_t));
 
-	EE_Program();
+	Nvm_Update();
 }
 
 
@@ -129,6 +129,16 @@ void Settings_Restore(uint8_t restore_flag) {
 		settings.max_travel[Y_AXIS] = (-DEFAULT_Y_MAX_TRAVEL);
 		settings.max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);
 
+		settings.backlash[X_AXIS] = DEFAULT_X_BACKLASH;
+		settings.backlash[Y_AXIS] = DEFAULT_Y_BACKLASH;
+		settings.backlash[Z_AXIS] = DEFAULT_Z_BACKLASH;
+
+		settings.tool_change = DEFAULT_TOOL_CHANGE_MODE;
+		settings.tls_valid = 0;
+		settings.tls_position[X_AXIS] = 0;
+		settings.tls_position[Y_AXIS] = 0;
+		settings.tls_position[Z_AXIS] = 0;
+
 		WriteGlobalSettings();
 	}
 
@@ -145,20 +155,20 @@ void Settings_Restore(uint8_t restore_flag) {
 
 	if(restore_flag & SETTINGS_RESTORE_STARTUP_LINES) {
 #if N_STARTUP_LINE > 0
-		EE_WriteByte(EEPROM_ADDR_STARTUP_BLOCK, 0);
-		EE_WriteByte(EEPROM_ADDR_STARTUP_BLOCK+1, 0); // Checksum
+		Nvm_WriteByte(EEPROM_ADDR_STARTUP_BLOCK, 0);
+		Nvm_WriteByte(EEPROM_ADDR_STARTUP_BLOCK+1, 0); // Checksum
 #endif
 #if N_STARTUP_LINE > 1
-		EE_WriteByte(EEPROM_ADDR_STARTUP_BLOCK+(LINE_BUFFER_SIZE+1), 0);
-		EE_WriteByte(EEPROM_ADDR_STARTUP_BLOCK+(LINE_BUFFER_SIZE+2), 0); // Checksum
+		Nvm_WriteByte(EEPROM_ADDR_STARTUP_BLOCK+(STARTUP_LINE_LEN+1), 0);
+		Nvm_WriteByte(EEPROM_ADDR_STARTUP_BLOCK+(STARTUP_LINE_LEN+2), 0); // Checksum
 #endif
-		EE_Program();
+		Nvm_Update();
 	}
 
 	if(restore_flag & SETTINGS_RESTORE_BUILD_INFO) {
-		EE_WriteByte(EEPROM_ADDR_BUILD_INFO , 0);
-		EE_WriteByte(EEPROM_ADDR_BUILD_INFO+1 , 0); // Checksum
-		EE_Program();
+		Nvm_WriteByte(EEPROM_ADDR_BUILD_INFO , 0);
+		Nvm_WriteByte(EEPROM_ADDR_BUILD_INFO+1 , 0); // Checksum
+		Nvm_Update();
 	}
 }
 
@@ -166,8 +176,8 @@ void Settings_Restore(uint8_t restore_flag) {
 // Reads startup line from EEPROM. Updated pointed line string data.
 uint8_t Settings_ReadStartupLine(uint8_t n, char *line)
 {
-	uint32_t addr = n*(LINE_BUFFER_SIZE+1)+EEPROM_ADDR_STARTUP_BLOCK;
-	if (!(EE_ReadByteArray((uint8_t*)line, addr, LINE_BUFFER_SIZE))) {
+	uint32_t addr = n*(STARTUP_LINE_LEN+1)+EEPROM_ADDR_STARTUP_BLOCK;
+	if (!(Nvm_Read((uint8_t*)line, addr, STARTUP_LINE_LEN))) {
 		// Reset line with default value
 		line[0] = 0; // Empty line
 		Settings_StoreStartupLine(n, line);
@@ -182,7 +192,7 @@ uint8_t Settings_ReadStartupLine(uint8_t n, char *line)
 // Reads startup line from EEPROM. Updated pointed line string data.
 uint8_t Settings_ReadBuildInfo(char *line)
 {
-	if(!(EE_ReadByteArray((uint8_t*)line, EEPROM_ADDR_BUILD_INFO, LINE_BUFFER_SIZE))) {
+	if(!(Nvm_Read((uint8_t*)line, EEPROM_ADDR_BUILD_INFO, STARTUP_LINE_LEN))) {
 		// Reset line with default value
 		line[0] = 0; // Empty line
 		Settings_StoreBuildInfo(line);
@@ -198,7 +208,7 @@ uint8_t Settings_ReadBuildInfo(char *line)
 uint8_t Settings_ReadCoordData(uint8_t coord_select, float *coord_data)
 {
 	uint32_t addr = coord_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_PARAMETERS;
-	if(!(EE_ReadByteArray((uint8_t*)coord_data, addr, sizeof(float)*N_AXIS))) {
+	if(!(Nvm_Read((uint8_t*)coord_data, addr, sizeof(float)*N_AXIS))) {
 		// Reset with default zero vector
 		memset(&coord_data, 0.0, sizeof(coord_data));
 		Settings_WriteCoordData(coord_select, coord_data);
@@ -213,11 +223,11 @@ uint8_t Settings_ReadCoordData(uint8_t coord_select, float *coord_data)
 // Reads Grbl global settings struct from EEPROM.
 uint8_t ReadGlobalSettings() {
 	// Check version-byte of eeprom
-	uint8_t version = EE_ReadByte(0);
+	uint8_t version = Nvm_ReadByte(0);
 
 	if(version == SETTINGS_VERSION) {
 		// Read settings-record and check checksum
-		if(!(EE_ReadByteArray((uint8_t*)&settings, EEPROM_ADDR_GLOBAL, sizeof(Settings_t)))) {
+		if(!(Nvm_Read((uint8_t*)&settings, EEPROM_ADDR_GLOBAL, sizeof(Settings_t)))) {
 			return false;
 		}
 	}
@@ -261,6 +271,7 @@ uint8_t Settings_StoreGlobalSetting(uint8_t parameter, float value) {
 
 					case 2: settings.acceleration[parameter] = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
 					case 3: settings.max_travel[parameter] = -value; break;  // Store as negative for grbl internal use.
+					case 4: settings.backlash[parameter] = value; break;
 				}
 				break; // Exit while-loop after setting has been configured and proceed to the EEPROM write call.
 			}
@@ -321,6 +332,8 @@ uint8_t Settings_StoreGlobalSetting(uint8_t parameter, float value) {
 			System_FlagWcoChange(); // Make sure WCO is immediately updated.
 			break;
 
+        case 14: settings.tool_change = int_value; break;   // Check for range?
+
 		case 20:
 			if (int_value) {
 				if (BIT_IS_FALSE(settings.flags, BITFLAG_HOMING_ENABLE)) { return(STATUS_SOFT_LIMIT_ERROR); }
@@ -365,10 +378,19 @@ uint8_t Settings_StoreGlobalSetting(uint8_t parameter, float value) {
 }
 
 
+void Settings_StoreTlsPosition(void)
+{
+    memcpy(settings.tls_position, sys_position, sizeof(float)*N_AXIS);
+    settings.tls_valid = 1;
+
+    WriteGlobalSettings();
+}
+
+
 // Initialize the config subsystem
 void Settings_Init(void)
 {
-	EE_Init();
+	Nvm_Init();
 
 	if(!ReadGlobalSettings()) {
 		Report_StatusMessage(STATUS_SETTING_READ_FAIL);

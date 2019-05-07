@@ -4,7 +4,7 @@
 
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
-  Copyright (c)	2017 Patrick F.
+  Copyright (c)	2018-2019 Patrick F.
 
   Grbl-Advanced is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #include "grbl_advance.h"
 
 #include "Print.h"
+#include "FIFO_USART.h"
 
 
 // Declare system global variable structure
@@ -32,29 +33,14 @@ System_t sys;
 int32_t sys_position[N_AXIS];      // Real-time machine (aka home) position vector in steps.
 int32_t sys_probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
 volatile uint8_t sys_probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
-volatile uint8_t sys_rt_exec_state;   // Global realtime executor bitflag variable for state management. See EXEC bitmasks.
+volatile uint16_t sys_rt_exec_state;   // Global realtime executor bitflag variable for state management. See EXEC bitmasks.
 volatile uint8_t sys_rt_exec_alarm;   // Global realtime executor bitflag variable for setting various alarms.
 volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor bitflag variable for motion-based overrides.
 volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bitflag variable for spindle/coolant overrides.
 
 
-int main(void) {
-//	GPIO_InitTypeDef GPIO_InitStructure;
-//
-//	/* GPIOC clock enable */
-//	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC , ENABLE);
-//
-//	/* GPIOC Configuration: Test Pin */
-//	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
-//	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-//	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-//	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-//	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-//	GPIO_Init(GPIOC, &GPIO_InitStructure);
-
-	// Init SysTick 1ms
-	SysTick_Init();
-
+int main(void)
+{
 	// Init formatted output
 	Print_Init();
 
@@ -64,21 +50,30 @@ int main(void) {
 
     System_ResetPosition();
 
-    if(BIT_IS_TRUE(settings.flags, BITFLAG_HOMING_ENABLE)) {
+    // Init SysTick 1ms
+	SysTick_Init();
+
+
+    if(BIT_IS_TRUE(settings.flags, BITFLAG_HOMING_ENABLE))
+    {
 		sys.state = STATE_ALARM;
     }
-    else {
+    else
+    {
 		sys.state = STATE_IDLE;
     }
 
 	// Grbl-Advanced initialization loop upon power-up or a system abort. For the latter, all processes
 	// will return to this loop to be cleanly re-initialized.
-	while(1) {
+	while(1)
+    {
 		// Reset system variables.
-		uint8_t prior_state = sys.state;
+		uint16_t prior_state = sys.state;
+		uint8_t home_state = sys.is_homed;
 
 		System_Clear();
 		sys.state = prior_state;
+		sys.is_homed = home_state;
 
 		Probe_Reset();
 
@@ -91,6 +86,8 @@ int main(void) {
 		// Reset Grbl-Advanced primary systems.
 		GC_Init();
 		Planner_Init();
+		MC_Init();
+		TC_Init();
 
 		Coolant_Init();
 		Limits_Init();
@@ -105,8 +102,12 @@ int main(void) {
 		// Print welcome message. Indicates an initialization has occured at power-up or with a reset.
 		Report_InitMessage();
 
-		// Start Grbl-Advanced main loop. Processes program inputs and executes them.
+		//-- Start Grbl-Advanced main loop. Processes program inputs and executes them. --//
 		Protocol_MainLoop();
+		//--------------------------------------------------------------------------------//
+
+        // Clear serial buffer after soft reset to prevent undefined behavior
+		FifoUsart_Init();
 	}
 
     return 0;
