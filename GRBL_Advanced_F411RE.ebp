@@ -67,7 +67,7 @@
 			<Add option="$device=cortex-m4" />
 			<Add option="$fpu=fpv4-sp-d16" />
 			<Add option="$lscript=./stm32f411re_flash.ld" />
-			<Add option="$stack=0x0300" />
+			<Add option="$stack=0x0400" />
 			<Add option="$heap=0x0000" />
 		</Device>
 		<Compiler>
@@ -89,9 +89,9 @@
 			<Add directory=".\SPL\src" />
 		</Compiler>
 		<Linker>
+			<Add option="-u _scanf_float" />
 			<Add option="-eb_lib=n" />
 			<Add option="-eb_start_files" />
-			<Add option="-flto" />
 			<Add option="-lm" />
 		</Linker>
 		<ExtraCommands>
@@ -99,12 +99,127 @@
 			<Mode before="0" />
 			<Mode after="1" />
 		</ExtraCommands>
-		<Unit filename="cmsis\arm_common_tables.h" />
-		<Unit filename="cmsis\arm_math.h" />
-		<Unit filename="cmsis\core_cm4.h" />
-		<Unit filename="cmsis\core_cm4_simd.h" />
-		<Unit filename="cmsis\core_cmFunc.h" />
-		<Unit filename="cmsis\core_cmInstr.h" />
+		<Unit filename="ARM\cmsis\arm_common_tables.h" />
+		<Unit filename="ARM\cmsis\arm_math.h" />
+		<Unit filename="ARM\cmsis\core_cm4.h" />
+		<Unit filename="ARM\cmsis\core_cm4_simd.h" />
+		<Unit filename="ARM\cmsis\core_cmFunc.h" />
+		<Unit filename="ARM\cmsis\core_cmInstr.h" />
+		<Unit filename="ARM\SPL\inc\misc.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_adc.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_can.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_crc.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_cryp.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_dac.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_dbgmcu.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_dcmi.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_dma.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_exti.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_flash.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_gpio.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_hash.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_i2c.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_iwdg.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_pwr.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_rcc.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_rng.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_rtc.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_sdio.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_spi.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_syscfg.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_tim.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_usart.h" />
+		<Unit filename="ARM\SPL\inc\stm32f4xx_wwdg.h" />
+		<Unit filename="ARM\SPL\src\misc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_adc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_can.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_crc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_cryp.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_cryp_aes.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_cryp_des.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_cryp_tdes.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_dac.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_dbgmcu.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_dcmi.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_dma.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_exti.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_flash.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_gpio.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_hash.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_hash_md5.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_hash_sha1.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_i2c.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_iwdg.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_pwr.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_rcc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_rng.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_rtc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_sdio.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_spi.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_syscfg.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_tim.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_usart.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ARM\SPL\src\stm32f4xx_wwdg.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="grbl\Config.h" />
 		<Unit filename="grbl\CoolantControl.c">
 			<Option compilerVar="CC" />
@@ -168,6 +283,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="grbl\ToolChange.h" />
+		<Unit filename="grbl\ToolTable.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="grbl\ToolTable.h" />
 		<Unit filename="grbl\util.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -220,142 +339,67 @@
 		<Unit filename="HAL\USART\USART.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="HAL\USART\USART.h" />
+		<Unit filename="HAL\USART\Usart.h" />
+		<Unit filename="Libraries\CRC\CRC.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\CRC\CRC.h" />
+		<Unit filename="Libraries\EEPROM\M24C0X.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\EEPROM\M24C0X.h" />
+		<Unit filename="Libraries\Encoder\Encoder.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\Encoder\Encoder.h" />
+		<Unit filename="Libraries\Ethernet\Ethernet.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\Ethernet\Ethernet.h" />
+		<Unit filename="Libraries\Ethernet\ServerTCP.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\Ethernet\ServerTCP.h" />
+		<Unit filename="Libraries\Ethernet\utility\socket.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\Ethernet\utility\socket.h" />
+		<Unit filename="Libraries\Ethernet\utility\util2.h" />
+		<Unit filename="Libraries\Ethernet\utility\W5500.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\Ethernet\utility\W5500.h" />
+		<Unit filename="Libraries\GrIP\ComIf.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\GrIP\ComIf.h" />
+		<Unit filename="Libraries\GrIP\GrIP.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\GrIP\GrIP.h" />
+		<Unit filename="Libraries\Printf\Print.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libraries\Printf\Print.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="README.md" />
-		<Unit filename="SPL\inc\misc.h" />
-		<Unit filename="SPL\inc\stm32f4xx_adc.h" />
-		<Unit filename="SPL\inc\stm32f4xx_can.h" />
-		<Unit filename="SPL\inc\stm32f4xx_crc.h" />
-		<Unit filename="SPL\inc\stm32f4xx_cryp.h" />
-		<Unit filename="SPL\inc\stm32f4xx_dac.h" />
-		<Unit filename="SPL\inc\stm32f4xx_dbgmcu.h" />
-		<Unit filename="SPL\inc\stm32f4xx_dcmi.h" />
-		<Unit filename="SPL\inc\stm32f4xx_dma.h" />
-		<Unit filename="SPL\inc\stm32f4xx_exti.h" />
-		<Unit filename="SPL\inc\stm32f4xx_flash.h" />
-		<Unit filename="SPL\inc\stm32f4xx_gpio.h" />
-		<Unit filename="SPL\inc\stm32f4xx_hash.h" />
-		<Unit filename="SPL\inc\stm32f4xx_i2c.h" />
-		<Unit filename="SPL\inc\stm32f4xx_iwdg.h" />
-		<Unit filename="SPL\inc\stm32f4xx_pwr.h" />
-		<Unit filename="SPL\inc\stm32f4xx_rcc.h" />
-		<Unit filename="SPL\inc\stm32f4xx_rng.h" />
-		<Unit filename="SPL\inc\stm32f4xx_rtc.h" />
-		<Unit filename="SPL\inc\stm32f4xx_sdio.h" />
-		<Unit filename="SPL\inc\stm32f4xx_spi.h" />
-		<Unit filename="SPL\inc\stm32f4xx_syscfg.h" />
-		<Unit filename="SPL\inc\stm32f4xx_tim.h" />
-		<Unit filename="SPL\inc\stm32f4xx_usart.h" />
-		<Unit filename="SPL\inc\stm32f4xx_wwdg.h" />
-		<Unit filename="SPL\src\misc.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_adc.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_can.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_crc.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_cryp.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_cryp_aes.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_cryp_des.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_cryp_tdes.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_dac.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_dbgmcu.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_dcmi.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_dma.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_exti.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_flash.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_gpio.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_hash.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_hash_md5.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_hash_sha1.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_i2c.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_iwdg.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_pwr.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_rcc.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_rng.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_rtc.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_sdio.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_spi.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_syscfg.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_tim.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_usart.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="SPL\src\stm32f4xx_wwdg.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="Src\debug.h" />
-		<Unit filename="Src\M24C0X.c">
+		<Unit filename="Src\PID.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="Src\M24C0X.h" />
+		<Unit filename="Src\PID.h" />
 		<Unit filename="Src\Platform.h" />
-		<Unit filename="Src\Print.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="Src\Print.h" />
 		<Unit filename="stm32f411re_flash.ld" />
 		<Extensions>
 			<code_completion />
 			<debugger>
-				<target_debugging_settings target="Debug" active_interface="ST-link">
-					<debug_interface interface_id="ST-link" ip_address="localhost" ip_port="4242" path="${EMBITZ}\share\contrib" executable="STLinkGDB.exe" description="" dont_start_server="false" backoff_time="400" options="2" reg_filter="0" active_family="STMicroelectronics" gdb_before_conn="" gdb_after_conn="">
+				<target_debugging_settings target="Release" active_interface="EBlink">
+					<debug_interface interface_id="EBlink" ip_address="localhost" ip_port="4242" path="C:\Program Files (x86)\EmBitz\1.11\share\EBlink" executable="eblink.exe" description="" dont_start_server="false" backoff_time="400" options="0" reg_filter="0" active_family="STMicroelectronics" gdb_before_conn="" gdb_after_conn="">
+						<family_options family_id="STMicroelectronics" />
+					</debug_interface>
+					<debug_interface interface_id="ST-link" ip_address="localhost" ip_port="4242" path="${EMBITZ}\share\contrib" executable="STLinkGDB.exe" description="" dont_start_server="false" backoff_time="400" options="10" reg_filter="0" active_family="STMicroelectronics" gdb_before_conn="" gdb_after_conn="">
 						<family_options family_id="STMicroelectronics">
 							<option opt_id="ID_JTAG_SWD" opt_value="swd" />
 							<option opt_id="ID_VECTOR_START" opt_value="0x08000000" />
@@ -371,8 +415,31 @@
 						</family_options>
 					</debug_interface>
 				</target_debugging_settings>
-				<target_debugging_settings target="Release" active_interface="ST-link">
-					<debug_interface interface_id="ST-link" ip_address="localhost" ip_port="4242" path="${EMBITZ}\share\contrib" executable="STLinkGDB.exe" description="" dont_start_server="false" backoff_time="400" options="10" reg_filter="0" active_family="STMicroelectronics" gdb_before_conn="" gdb_after_conn="">
+				<target_debugging_settings target="Debug" active_interface="EBlink">
+					<debug_interface interface_id="EBlink" ip_address="localhost" ip_port="4242" path="C:\Program Files (x86)\EmBitz\1.11\share\EBlink" executable="eblink.exe" description="" dont_start_server="false" backoff_time="400" options="2" reg_filter="0" active_family="STMicroelectronics" gdb_before_conn="" gdb_after_conn="">
+						<family_options family_id="STMicroelectronics">
+							<option opt_id="ID_DEV_ADDR" opt_value="" />
+							<option opt_id="ID_DEV_SPEED" opt_value="4000" />
+							<option opt_id="ID_JTAG_SWD" opt_value="swd" />
+							<option opt_id="ID_RESET_TYPE" opt_value="System" />
+							<option opt_id="ID_DEVICE_SCRIPT_LIST" opt_value="stm32-auto" />
+							<option opt_id="ID_VERBOSE_LEVEL" opt_value="" />
+							<option opt_id="ID_VEC_TABLE" opt_value="1" />
+							<option opt_id="ID_VECTOR_START" opt_value="0x08000000" />
+							<option opt_id="ID_RAM_EXEC" opt_value="0" />
+							<option opt_id="ID_LOAD_PROGRAM" opt_value="1" />
+							<option opt_id="ID_HOTPLUG_CONNECT" opt_value="0" />
+							<option opt_id="ID_SEMIHOST_CHECK" opt_value="1" />
+							<option opt_id="ID_NO_FLASH_CACHE" opt_value="0" />
+							<option opt_id="ID_NO_GUI_MSGBOX" opt_value="0" />
+							<option opt_id="ID_SHUTDOWN_AFTER_DISCONNECT" opt_value="1" />
+							<option opt_id="ID_EBLINK_CMD_LINE" opt_value="" />
+							<option opt_id="ID_CMD_RESET" opt_value="" />
+							<option opt_id="ID_BEFORE_CONNECT" opt_value="" />
+							<option opt_id="ID_AFTER_CONNECT" opt_value="" />
+						</family_options>
+					</debug_interface>
+					<debug_interface interface_id="ST-link" ip_address="localhost" ip_port="4242" path="${EMBITZ}\share\contrib" executable="STLinkGDB.exe" description="" dont_start_server="false" backoff_time="400" options="2" reg_filter="0" active_family="STMicroelectronics" gdb_before_conn="" gdb_after_conn="">
 						<family_options family_id="STMicroelectronics">
 							<option opt_id="ID_JTAG_SWD" opt_value="swd" />
 							<option opt_id="ID_VECTOR_START" opt_value="0x08000000" />

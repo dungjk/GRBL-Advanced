@@ -4,7 +4,7 @@
 
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
-  Copyright (c)	2018-2019 Patrick F.
+  Copyright (c)	2018-2020 Patrick F.
 
   Grbl-Advanced is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -23,9 +23,15 @@
 
 #include "System32.h"
 #include "grbl_advance.h"
+#include "Ethernet.h"
+#include "GrIP.h"
+#include "ServerTCP.h"
+#include "util2.h"
 
 #include "Print.h"
 #include "FIFO_USART.h"
+#include "ComIf.h"
+#include "Platform.h"
 
 
 // Declare system global variable structure
@@ -38,77 +44,96 @@ volatile uint8_t sys_rt_exec_alarm;   // Global realtime executor bitflag variab
 volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor bitflag variable for motion-based overrides.
 volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bitflag variable for spindle/coolant overrides.
 
+#ifdef ETH_IF
+    uint8_t MAC[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+
+    // IP Address of tcp server
+    IPAddress_t IP = {{192, 168, 1, 20}};
+    IPAddress_t GatewayIP = {{192, 168, 1, 1}};
+    IPAddress_t SubnetMask = {{255, 255, 255, 0}};
+    IPAddress_t MyDns = {{8, 8, 8, 8}};
+#endif
+
 
 int main(void)
 {
-	// Init formatted output
-	Print_Init();
-
+    // Init formatted output
+    Printf_Init();
     System_Init();
     Stepper_Init();
     Settings_Init();
 
     System_ResetPosition();
 
-    // Init SysTick 1ms
-	SysTick_Init();
+#ifdef ETH_IF
+    // Initialize W5500
+    Ethernet_Init(MAC, &IP, &MyDns, &GatewayIP, &SubnetMask);
 
+    // Initialize TCP server
+    ServerTCP_Init(ETH_SOCK, ETH_PORT);
+#endif
+
+    // Initialize GrIP protocol
+    GrIP_Init();
+
+    // Init SysTick 1ms
+    SysTick_Init();
 
     if(BIT_IS_TRUE(settings.flags, BITFLAG_HOMING_ENABLE))
     {
-		sys.state = STATE_ALARM;
+        sys.state = STATE_ALARM;
     }
     else
     {
-		sys.state = STATE_IDLE;
+        sys.state = STATE_IDLE;
     }
 
-	// Grbl-Advanced initialization loop upon power-up or a system abort. For the latter, all processes
-	// will return to this loop to be cleanly re-initialized.
-	while(1)
+    // Grbl-Advanced initialization loop upon power-up or a system abort. For the latter, all processes
+    // will return to this loop to be cleanly re-initialized.
+    while(1)
     {
-		// Reset system variables.
-		uint16_t prior_state = sys.state;
-		uint8_t home_state = sys.is_homed;
+        // Reset system variables.
+        uint16_t prior_state = sys.state;
+        uint8_t home_state = sys.is_homed;
 
-		System_Clear();
-		sys.state = prior_state;
-		sys.is_homed = home_state;
+        System_Clear();
+        sys.state = prior_state;
+        sys.is_homed = home_state;
 
-		Probe_Reset();
+        Probe_Reset();
 
-		sys_probe_state = 0;
-		sys_rt_exec_state = 0;
-		sys_rt_exec_alarm = 0;
-		sys_rt_exec_motion_override = 0;
-		sys_rt_exec_accessory_override = 0;
+        sys_probe_state = 0;
+        sys_rt_exec_state = 0;
+        sys_rt_exec_alarm = 0;
+        sys_rt_exec_motion_override = 0;
+        sys_rt_exec_accessory_override = 0;
 
-		// Reset Grbl-Advanced primary systems.
-		GC_Init();
-		Planner_Init();
-		MC_Init();
-		TC_Init();
+        // Reset Grbl-Advanced primary systems.
+        GC_Init();
+        Planner_Init();
+        MC_Init();
+        TC_Init();
 
-		Coolant_Init();
-		Limits_Init();
-		Probe_Init();
-		Spindle_Init();
-		Stepper_Reset();
+        Coolant_Init();
+        Limits_Init();
+        Probe_Init();
+        Spindle_Init();
+        Stepper_Reset();
 
-		// Sync cleared gcode and planner positions to current system position.
-		Planner_SyncPosition();
-		GC_SyncPosition();
+        // Sync cleared gcode and planner positions to current system position.
+        Planner_SyncPosition();
+        GC_SyncPosition();
 
-		// Print welcome message. Indicates an initialization has occured at power-up or with a reset.
-		Report_InitMessage();
+        // Print welcome message. Indicates an initialization has occured at power-up or with a reset.
+        Report_InitMessage();
 
-		//-- Start Grbl-Advanced main loop. Processes program inputs and executes them. --//
-		Protocol_MainLoop();
-		//--------------------------------------------------------------------------------//
+        //-- Start Grbl-Advanced main loop. Processes program inputs and executes them. --//
+        Protocol_MainLoop();
+        //--------------------------------------------------------------------------------//
 
         // Clear serial buffer after soft reset to prevent undefined behavior
-		FifoUsart_Init();
-	}
+        FifoUsart_Init();
+    }
 
     return 0;
 }

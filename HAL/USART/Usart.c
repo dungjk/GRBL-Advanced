@@ -16,7 +16,7 @@
   along with STM32F4_HAL.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <stdio.h>
-#include "USART.h"
+#include "Usart.h"
 #include "FIFO_USART.h"
 
 
@@ -67,7 +67,7 @@ void Usart_Init(USART_TypeDef *usart, uint32_t baud)
 		/* Enable the USARTx Interrupt */
 		NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
 		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 		NVIC_Init(&NVIC_InitStructure);
 
@@ -104,7 +104,7 @@ void Usart_Init(USART_TypeDef *usart, uint32_t baud)
 
 		/* Enable the USARTx Interrupt */
 		NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
-		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
 		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 		NVIC_Init(&NVIC_InitStructure);
