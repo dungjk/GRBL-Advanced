@@ -26,27 +26,38 @@ OBJDUMP		= 	${GCC_BASE}/arm-none-eabi-objdump
 #---------------------------------------------------------------------------------
 TARGET		:=	GRBL_Advanced
 BUILD       :=	build
-SOURCES		:=	./ ARM/cmsis/ grbl/ HAL/ HAL/EXTI HAL/FLASH HAL/GPIO HAL/I2C HAL/SPI HAL/STM32 \
+SOURCES		:=	./ ARM/ ARM/cmsis/ grbl/ HAL/ HAL/EXTI HAL/FLASH HAL/GPIO HAL/I2C HAL/SPI HAL/STM32 \
                 HAL/TIM HAL/USART ARM/SPL/src Src/ Libraries/GrIP Libraries/CRC Libraries/Ethernet \
-                Libraries/Ethernet/utility Libraries/Encoder Libraries/EEPROM Libraries/Printf
+                Libraries/Ethernet/W5500 Libraries/Encoder Libraries/EEPROM Libraries/Printf
 
 INCLUDES    :=	$(SOURCES) ARM/SPL/inc
 
-LD_FILE		= stm32f411re_flash.ld
-DEFINES		= -DSTM32F411xE -DSTM32F411RE
-
-#LD_FILE		= stm32f446re_flash.ld
-#DEFINES		= -DSTM32F446xx -DSTM32F446RE
+# STM32 F446
+ifeq ($(target),F446)
+	LD_FILE		= stm32f446re_flash.ld
+	DEFINES		= -DSTM32F446xx -DSTM32F446RE
+	TARGET_STR	= "STM32 F446"
+# STM32 F411
+else ifeq ($(target),F411)
+	LD_FILE		= stm32f411re_flash.ld
+	DEFINES		= -DSTM32F411xE -DSTM32F411RE
+	TARGET_STR	= "STM32 F411"
+else
+# Default Target
+	LD_FILE		= stm32f446re_flash.ld
+	DEFINES		= -DSTM32F446xx -DSTM32F446RE
+	TARGET_STR	= "STM32 F446"
+endif
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 FLAGS       := 	-mfloat-abi=hard -mcpu=cortex-m4 -gdwarf-2 -mfpu=fpv4-sp-d16 -mthumb -Wno-misleading-indentation
-CFLAGS      := 	-O2 -g1 -std=c11 -Wall -Wextra $(INCLUDE) -fno-common -fsingle-precision-constant -fdata-sections \
+CFLAGS      := 	-O2 -g1 -std=c17 -Wall -Wextra $(INCLUDE) -fno-common -fsingle-precision-constant -fdata-sections \
                 -ffunction-sections -fomit-frame-pointer -mlittle-endian  -DUSE_STDPERIPH_DRIVER -D__FPU_USED -DARM_MATH_CM4 -Wimplicit-fallthrough=0
 CXXFLAGS    :=  $(CFLAGS)
 
-LDFLAGS		:=	-lm -flto -Wl,--gc-sections -Wl,-M=$(OUTPUT).map --specs=nosys.specs -nostartfiles --specs=nano.specs -u _scanf_float
+LDFLAGS		:=	-lm -flto -Wl,--gc-sections -Wl,-M=$(OUTPUT).map --specs=nosys.specs -nostartfiles --specs=nano.specs
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
@@ -110,8 +121,9 @@ export OUTPUT	:=	$(CURDIR)/$(TARGET)
 
 #---------------------------------------------------------------------------------
 all:
+	@echo "Building "$(TARGET_STR)"..."
 	@[ -d $(BUILD) ] || mkdir -p $(BUILD)
-	@make --no-print-directory -C $(BUILD) $(OUTPUT).elf $(OUTPUT).bin $(OUTPUT).hex $(OUTPUT).lst -f $(CURDIR)/Makefile -j3
+	@make --no-print-directory -C $(BUILD) $(OUTPUT).elf $(OUTPUT).bin $(OUTPUT).hex $(OUTPUT).lst -f $(CURDIR)/Makefile -j4
 	@$(SIZE) $(OUTPUT).elf
 
 #---------------------------------------------------------------------------------
@@ -121,6 +133,7 @@ clean:
 #---------------------------------------------------------------------------------
 flash: $(OUTPUT).bin
 	st-flash write $(OUTPUT).bin 0x8000000
+	st-flash reset
 
 #---------------------------------------------------------------------------------
 else

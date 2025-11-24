@@ -45,6 +45,7 @@
 #define STATUS_SETTING_DISABLED_LASER           17
 #define STATUS_MACHINE_NOT_HOMED                18
 #define STATUS_TLS_NOT_SET                      19
+#define STATUS_CHECK_INPUT                      20
 
 #define STATUS_GCODE_UNSUPPORTED_COMMAND        20
 #define STATUS_GCODE_MODAL_GROUP_VIOLATION      21
@@ -65,6 +66,9 @@
 #define STATUS_GCODE_UNUSED_WORDS               36
 #define STATUS_GCODE_G43_DYNAMIC_AXIS_ERROR     37
 #define STATUS_GCODE_MAX_VALUE_EXCEEDED         38
+
+#define STATUS_PROBE_ERROR                      39
+#define STATUS_TOOLS_READ_FAIL                  40
 
 // Define Grbl alarm codes. Valid values (1-255). 0 is reserved.
 #define ALARM_HARD_LIMIT_ERROR          EXEC_ALARM_HARD_LIMIT
@@ -90,6 +94,7 @@
 #define MESSAGE_SPINDLE_RESTORE         10
 #define MESSAGE_SLEEP_MODE              11
 #define MESSAGE_INVALID_TOOL            12
+#define MESSAGE_CHECK_INPUTS            13
 
 
 // Prints system status messages.
@@ -132,12 +137,12 @@ void Report_NgcParams(void);
 void Report_GCodeModes(void);
 
 // Prints startup line when requested and executed.
-void Report_StartupLine(uint8_t n, char *line);
+void Report_StartupLine(uint8_t n, const char *line);
 
-void Report_ExecuteStartupMessage(char *line, uint8_t status_code);
+void Report_ExecuteStartupMessage(const char *line, uint8_t status_code);
 
 // Prints build info and user info
-void Report_BuildInfo(char *line);
+void Report_BuildInfo(const char *line);
 
 
 #endif // REPORT_H

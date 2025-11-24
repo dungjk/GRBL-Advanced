@@ -18,17 +18,22 @@
   along with Grbl-Advanced.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "Encoder.h"
+#include "Config.h"
 #include "TIM.h"
 
 
 static uint32_t OvfCnt = 0;
 static uint32_t CntValue = 0;
 
+static uint16_t PulsesPerRev = 360;
+static bool isZero = false;
 
-void Encoder_Init(void)
+
+void Encoder_Init(uint16_t ppr)
 {
-    TIM4_Init(PULSES_PER_REV);
+    TIM4_Init(ppr);
     Encoder_Reset();
+    PulsesPerRev = ppr;
 }
 
 
@@ -36,6 +41,13 @@ void Encoder_Reset(void)
 {
     OvfCnt = 0;
     CntValue = 0;
+    isZero = false;
+}
+
+
+void Encoder_SetPulsesPerRev(uint16_t ppr)
+{
+    Encoder_Init(ppr);
 }
 
 
@@ -51,8 +63,20 @@ void Encoder_SetValue(uint32_t val)
 }
 
 
+bool Encoder_Zero(void)
+{
+    if(isZero)
+    {
+        isZero = false;
+        return true;
+    }
+    return false;
+}
+
+
 void Encoder_OvfISR(void)
 {
     OvfCnt++;
-    CntValue += PULSES_PER_REV;
+    CntValue += PulsesPerRev;
+    isZero = true;
 }

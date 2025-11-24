@@ -32,7 +32,7 @@ void Limits_Init(void);
 void Limits_Disable(void);
 
 // Returns limit state as a bit-wise uint8 variable.
-uint8_t Limits_GetState(void);
+uint8_t Limits_GetState(bool held);
 
 void Limit_PinChangeISR(void);
 
@@ -40,7 +40,7 @@ void Limit_PinChangeISR(void);
 void Limits_GoHome(uint8_t cycle_mask);
 
 // Check for soft limit violations
-void Limits_SoftCheck(float *target);
+void Limits_SoftCheck(const float *target);
 
 
 #endif // LIMITS_H

@@ -3,7 +3,7 @@
   Part of Grbl-Advanced
 
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
-  Copyright (c) 2017 Patrick F.
+  Copyright (c) 2017-2024 Patrick F.
 
   Grbl-Advanced is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 #include "GCode.h"
 #include "CoolantControl.h"
 #include "Config.h"
+#include "Settings.h"
 
 
 void Coolant_Init(void)
@@ -37,49 +38,58 @@ void Coolant_Init(void)
 // an interrupt-level. No report flag set, but only called by routines that don't need it.
 void Coolant_Stop(void)
 {
-#ifdef INVERT_COOLANT_FLOOD_PIN
-    GPIO_SetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
-#else
-    GPIO_ResetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
-#endif
+    if (BIT_IS_TRUE(settings.input_invert_mask, BITFLAG_INVERT_FLOOD_PIN))
+    {
+        GPIO_SetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
+    }
+    else
+    {
+        GPIO_ResetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
+    }
 
-#ifdef ENABLE_M7
-#ifdef INVERT_COOLANT_MIST_PIN
-    GPIO_SetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
-#else
-    GPIO_ResetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
-#endif
-#endif
+    if (BIT_IS_TRUE(settings.flags_ext, BITFLAG_ENABLE_M7))
+    {
+        if (BIT_IS_TRUE(settings.input_invert_mask, BITFLAG_INVERT_MIST_PIN))
+        {
+            GPIO_SetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
+        }
+        else
+        {
+            GPIO_ResetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
+        }
+    }
 }
-
 
 // Returns current coolant output state. Overrides may alter it from programmed state.
 uint8_t Coolant_GetState(void)
 {
     uint8_t cl_state = COOLANT_STATE_DISABLE;
 
+    uint8_t flood_state = GPIO_ReadInputDataBit(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
+    uint8_t mist_state = GPIO_ReadInputDataBit(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
+
+    if (BIT_IS_TRUE(settings.input_invert_mask, BITFLAG_INVERT_FLOOD_PIN))
+    {
+        flood_state = !flood_state;
+    }
+    if (BIT_IS_TRUE(settings.input_invert_mask, BITFLAG_INVERT_MIST_PIN))
+    {
+        mist_state = !mist_state;
+    }
+
     // TODO: Check if reading works
-#ifdef INVERT_COOLANT_FLOOD_PIN
-    if(!GPIO_ReadInputDataBit(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN))
+    if (flood_state)
     {
-#else
-    if(GPIO_ReadInputDataBit(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN))
-    {
-#endif
         cl_state |= COOLANT_STATE_FLOOD;
     }
 
-#ifdef ENABLE_M7
-#ifdef INVERT_COOLANT_MIST_PIN
-    if(!GPIO_ReadInputDataBit(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN))
+    if (BIT_IS_TRUE(settings.flags_ext, BITFLAG_ENABLE_M7))
     {
-#else
-    if(GPIO_ReadInputDataBit(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN))
-    {
-#endif
-        cl_state |= COOLANT_STATE_MIST;
+        if (mist_state)
+        {
+            cl_state |= COOLANT_STATE_MIST;
+        }
     }
-#endif
 
     return cl_state;
 }
@@ -89,7 +99,7 @@ uint8_t Coolant_GetState(void)
 // if enabled. Also sets a flag to report an update to a coolant state.
 // Called by coolant toggle override, parking restore, parking retract, sleep mode, g-code
 // parser program end, and g-code parser coolant_sync().
-void Coolant_SetState(uint8_t mode)
+void Coolant_SetState(const uint8_t mode)
 {
     if(sys.abort)
     {
@@ -99,53 +109,66 @@ void Coolant_SetState(uint8_t mode)
 
     if (mode & COOLANT_FLOOD_ENABLE)
     {
-#ifdef INVERT_COOLANT_FLOOD_PIN
-        GPIO_ResetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
-#else
-        GPIO_SetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
-#endif
+        if (BIT_IS_TRUE(settings.input_invert_mask, BITFLAG_INVERT_FLOOD_PIN))
+        {
+            GPIO_ResetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
+        }
+        else
+        {
+            GPIO_SetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
+        }
     }
     else
     {
-#ifdef INVERT_COOLANT_FLOOD_PIN
-        GPIO_SetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
-#else
-        GPIO_ResetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
-#endif
+        if (BIT_IS_TRUE(settings.input_invert_mask, BITFLAG_INVERT_FLOOD_PIN))
+        {
+            GPIO_SetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
+        }
+        else
+        {
+            GPIO_ResetBits(GPIO_COOL_FLOOD_PORT, GPIO_COOL_FLOOD_PIN);
+        }
     }
 
-#ifdef ENABLE_M7
-    if (mode & COOLANT_MIST_ENABLE)
+    if (BIT_IS_TRUE(settings.flags_ext, BITFLAG_ENABLE_M7))
     {
-#ifdef INVERT_COOLANT_MIST_PIN
-        GPIO_ResetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
-#else
-        GPIO_SetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
-#endif
+        if (mode & COOLANT_MIST_ENABLE)
+        {
+            if (BIT_IS_TRUE(settings.input_invert_mask, BITFLAG_INVERT_MIST_PIN))
+            {
+                GPIO_ResetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
+            }
+            else
+            {
+                GPIO_SetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
+            }
+        }
+        else
+        {
+            if (BIT_IS_TRUE(settings.input_invert_mask, BITFLAG_INVERT_MIST_PIN))
+            {
+                GPIO_SetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
+            }
+            else
+            {
+                GPIO_ResetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
+            }
+        }
     }
-    else
-    {
-#ifdef INVERT_COOLANT_MIST_PIN
-        GPIO_SetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
-#else
-        GPIO_ResetBits(GPIO_COOL_MIST_PORT, GPIO_COOL_MIST_PIN);
-#endif
-    }
-#endif
 
     sys.report_ovr_counter = 0; // Set to report change immediately
 }
 
-
 // G-code parser entry-point for setting coolant state. Forces a planner buffer sync and bails
 // if an abort or check-mode is active.
-void Coolant_Sync(uint8_t mode)
+void Coolant_Sync(const uint8_t mode)
 {
     if(sys.state == STATE_CHECK_MODE)
     {
         return;
     }
 
-    Protocol_BufferSynchronize(); // Ensure coolant turns on when specified in program.
+    // Ensure coolant turns on when specified in program.
+    Protocol_BufferSynchronize();
     Coolant_SetState(mode);
 }

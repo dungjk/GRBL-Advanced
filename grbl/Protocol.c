@@ -34,8 +34,9 @@
 #include "GrIP.h"
 #include "Platform.h"
 #include "ServerTCP.h"
-
 #include "Print.h"
+
+#include <string.h>
 
 
 // Line buffer size from the serial input stream to be executed.
@@ -55,7 +56,7 @@
 #define LINE_FLAG_COMMENT_SEMICOLON     BIT(2)
 
 
-static char line[LINE_BUFFER_SIZE]; // Line to be executed. Zero-terminated.
+static char line[LINE_BUFFER_SIZE] = {}; // Line to be executed. Zero-terminated.
 static void Protocol_ExecRtSuspend(void);
 extern void ProcessReceive(char c);
 
@@ -65,16 +66,22 @@ extern void ProcessReceive(char c);
 void Protocol_MainLoop(void)
 {
     // Perform some machine checks to make sure everything is good to go.
-#ifdef CHECK_LIMITS_AT_INIT
-    if(BIT_IS_TRUE(settings.flags, BITFLAG_HARD_LIMIT_ENABLE))
+    if (BIT_IS_TRUE(settings.flags, BITFLAG_CHECK_LIMITS_AT_INIT))
     {
-        if(Limits_GetState())
+        if (BIT_IS_TRUE(settings.flags, BITFLAG_HARD_LIMIT_ENABLE))
         {
-            sys.state = STATE_ALARM; // Ensure alarm state is active.
-            Report_FeedbackMessage(MESSAGE_CHECK_LIMITS);
+            if (Limits_GetState(true))
+            {
+                sys.state = STATE_ALARM; // Ensure alarm state is active.
+                Report_FeedbackMessage(MESSAGE_CHECK_LIMITS);
+            }
         }
     }
-#endif
+
+    if (System_GetControlState(true) & CONTROL_BTN_MASK)
+    {
+        Report_FeedbackMessage(MESSAGE_CHECK_INPUTS);
+    }
 
     // Check for and report alarm state after a reset, error, or an initial power up.
     // NOTE: Sleep mode disables the stepper drivers and position can't be guaranteed.
@@ -159,7 +166,7 @@ void Protocol_MainLoop(void)
                 // Reset tracking data for next line.
                 line_flags = 0;
                 char_counter = 0;
-
+                memset(line, 0, LINE_BUFFER_SIZE);
             }
             else
             {
@@ -293,8 +300,11 @@ void Protocol_ExecuteRealtime(void)
 
     Protocol_ExecRtSystem();
 
-#ifdef ETH_IF
+#if (USE_ETH_IF)
+    ServerTCP_Update();
+
     GrIP_Update();
+
     if(GrIP_Receive(&packet))
     {
         for(int i = 0; i < packet.RX_Header.Length; i++)
@@ -302,7 +312,6 @@ void Protocol_ExecuteRealtime(void)
             ProcessReceive(packet.Data[i]);
         }
     }
-    ServerTCP_Update();
 #else
     (void)packet;
 #endif
@@ -577,7 +586,6 @@ void Protocol_ExecRtSystem(void)
                     sys.state = STATE_IDLE;
                 }
             }
-
             System_ClearExecStateFlag(EXEC_CYCLE_STOP);
         }
     }
@@ -643,7 +651,8 @@ void Protocol_ExecRtSystem(void)
     rt_exec = sys_rt_exec_accessory_override;
     if(rt_exec)
     {
-        System_ClearExecAccessoryOverrides(); // Clear all accessory override flags.
+        // Clear all accessory override flags.
+        System_ClearExecAccessoryOverrides();
 
         // NOTE: Unlike motion overrides, spindle overrides do not require a planner reinitialization.
         uint8_t last_s_override =  sys.spindle_speed_ovr;
@@ -712,40 +721,43 @@ void Protocol_ExecRtSystem(void)
             if((sys.state == STATE_IDLE) || (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_JOG)))
             {
                 uint8_t coolant_state = gc_state.modal.coolant;
-#ifdef ENABLE_M7
-                if(rt_exec & EXEC_COOLANT_MIST_OVR_TOGGLE)
+                if (BIT_IS_TRUE(settings.flags_ext, BITFLAG_ENABLE_M7))
                 {
-                    if(coolant_state & COOLANT_MIST_ENABLE)
+                    if (rt_exec & EXEC_COOLANT_MIST_OVR_TOGGLE)
                     {
-                        BIT_FALSE(coolant_state,COOLANT_MIST_ENABLE);
+                        if (coolant_state & COOLANT_MIST_ENABLE)
+                        {
+                            BIT_FALSE(coolant_state, COOLANT_MIST_ENABLE);
+                        }
+                        else
+                        {
+                            coolant_state |= COOLANT_MIST_ENABLE;
+                        }
                     }
-                    else
+
+                    if (rt_exec & EXEC_COOLANT_FLOOD_OVR_TOGGLE)
                     {
-                        coolant_state |= COOLANT_MIST_ENABLE;
+                        if (coolant_state & COOLANT_FLOOD_ENABLE)
+                        {
+                            BIT_FALSE(coolant_state, COOLANT_FLOOD_ENABLE);
+                        }
+                        else
+                        {
+                            coolant_state |= COOLANT_FLOOD_ENABLE;
+                        }
                     }
                 }
-
-                if(rt_exec & EXEC_COOLANT_FLOOD_OVR_TOGGLE)
+                else
                 {
-                    if(coolant_state & COOLANT_FLOOD_ENABLE)
+                    if (coolant_state & COOLANT_FLOOD_ENABLE)
                     {
-                        BIT_FALSE(coolant_state,COOLANT_FLOOD_ENABLE);
+                        BIT_FALSE(coolant_state, COOLANT_FLOOD_ENABLE);
                     }
                     else
                     {
                         coolant_state |= COOLANT_FLOOD_ENABLE;
                     }
                 }
-#else
-                if(coolant_state & COOLANT_FLOOD_ENABLE)
-                {
-                    BIT_FALSE(coolant_state,COOLANT_FLOOD_ENABLE);
-                }
-                else
-                {
-                    coolant_state |= COOLANT_FLOOD_ENABLE;
-                }
-#endif
                 Coolant_SetState(coolant_state); // Report counter set in coolant_set_state().
                 gc_state.modal.coolant = coolant_state;
             }
@@ -817,8 +829,9 @@ static void Protocol_ExecRtSuspend(void)
             return;
         }
 
-#ifdef ETH_IF
+#if (USE_ETH_IF)
         GrIP_Update();
+
         if(GrIP_Receive(&packet))
         {
             for(int i = 0; i < packet.RX_Header.Length; i++)
@@ -909,9 +922,7 @@ static void Protocol_ExecRtSuspend(void)
                         Coolant_SetState(COOLANT_DISABLE);     // De-energize
 
                     }
-
 #endif
-
                     sys.suspend &= ~(SUSPEND_RESTART_RETRACT);
                     sys.suspend |= SUSPEND_RETRACT_COMPLETE;
 
@@ -929,10 +940,11 @@ static void Protocol_ExecRtSuspend(void)
 
                         while(!(sys.abort))
                         {
+                            // Do nothing until reset.
                             Protocol_ExecRtSystem();
-                        } // Do nothing until reset.
-
-                        return; // Abort received. Return to re-initialize.
+                        }
+                        // Abort received. Return to re-initialize.
+                        return;
                     }
 
                     // Allows resuming from parking/safety door. Actively checks if safety door is closed and ready to resume.
@@ -940,7 +952,8 @@ static void Protocol_ExecRtSuspend(void)
                     {
                         if(!(System_CheckSafetyDoorAjar()))
                         {
-                            sys.suspend &= ~(SUSPEND_SAFETY_DOOR_AJAR); // Reset door ajar flag to denote ready to resume.
+                            // Reset door ajar flag to denote ready to resume.
+                            sys.suspend &= ~(SUSPEND_SAFETY_DOOR_AJAR);
                         }
                     }
 
@@ -1050,7 +1063,8 @@ static void Protocol_ExecRtSuspend(void)
                         }
                         else
                         {
-                            sys.spindle_stop_ovr = SPINDLE_STOP_OVR_DISABLED; // Clear stop override state
+                            // Clear stop override state
+                            sys.spindle_stop_ovr = SPINDLE_STOP_OVR_DISABLED;
                         }
                         // Handles restoring of spindle state
                     }
@@ -1073,8 +1087,8 @@ static void Protocol_ExecRtSuspend(void)
                         {
                             System_SetExecStateFlag(EXEC_CYCLE_START);  // Set to resume program.
                         }
-
-                        sys.spindle_stop_ovr = SPINDLE_STOP_OVR_DISABLED; // Clear stop override state
+                        // Clear stop override state
+                        sys.spindle_stop_ovr = SPINDLE_STOP_OVR_DISABLED;
                     }
                 }
                 else
